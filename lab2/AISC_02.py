@@ -233,6 +233,56 @@ def decrypt_four_rounds(ctext):
 
     return vecToInt(state)
 
+def computeRound_lazy(subkey0, subkey1, state):
+    # generic round: NS-SR-MC-AK
+    state = sub4NibList(sBox, state)
+    #state = shiftRow(state)
+    #state = mixCol(state)
+    state = addKey(intToVec((subkey0 << 8) + subkey1), state)
+    return state
+
+def lazy_simplified(ptext):
+
+    """Encrypt plaintext block (4 rounds) in a lazy version (without ShiftRow and
+    MixColumns"""
+
+    # first AddKey
+    state = addKey(intToVec((w[0] << 8) + w[1]), intToVec(ptext))
+    # first round
+    state = computeRound_lazy(w[2], w[3], state)
+    # second round
+    state = computeRound_lazy(w[4], w[5], state)
+    # third round
+    state = computeRound_lazy(w[6], w[7], state)
+    # last round: NS-SR-AK
+    state = sub4NibList(sBox, state)
+    #state = shiftRow(state)
+    state = addKey(intToVec((w[8] << 8) + w[9]), state)
+
+
+    return vecToInt(state)
+
+def very_lazy_simplified(ptext):
+
+    """Encrypt plaintext block (4 rounds) in a very lazy version (without ShiftRow and
+    MixColumns and key schedule)"""
+
+    # first AddKey
+    state = addKey(intToVec((w[0] << 8) + w[1]), intToVec(ptext))
+    # first round
+    state = computeRound_lazy(w[0], w[1], state)
+    # second round
+    state = computeRound_lazy(w[0], w[1], state)
+    # third round
+    state = computeRound_lazy(w[0], w[1], state)
+    # last round: NS-SR-AK
+    state = sub4NibList(sBox, state)
+    #state = shiftRow(state)
+    state = addKey(intToVec((w[0] << 8) + w[1]), state)
+
+
+    return vecToInt(state)
+
 
  
 if __name__ == '__main__':

@@ -176,6 +176,113 @@ print('Simplified version of AES with four rounds:')
 print(f'Average Hamming distance (diffusion): {avg_hamm_dist}')
 print(f'Average Hamming distance (confusion): {avg_hamm_dist_c}')
 
+# =========================
+# four rounds lazy
+# =========================
+
+# diffusion
+def diffusion_four_lazy(key, N=1000):
+    """diffusion property check: 4 rounds"""
+
+    hamming_distance_d = []
+    ciphertext_ls_d = []
+    keyExp(key)  # Key schedule algorithm: expanding key
+    plaintext_r = random.getrandbits(16)  # a random 16-bits plaintext
+    ciphertext = lazy_simplified(plaintext_r)  # simple AES encryption (just 2 round)
+    ciphertext_ls_d.append(ciphertext)
+
+    # average hamming distance between ciphertexts
+    for i in range(1000):
+        error = 1 << random.randrange(16)
+        plaintext_e = plaintext_r ^ error  # flip a bit in the plaintext
+        ciphertext_ls_d.append(lazy_simplified(plaintext_e))
+        hamming_distance_d.append(hamming(ciphertext_ls_d[i], ciphertext_ls_d[i + 1]))
+
+    avg_hamm_dist = np.array(hamming_distance_d).mean()  # 5.934
+    return avg_hamm_dist
+#confusion
+def confusion_four_lazy(ptext, N=1000):
+    """ confusion property check: four rounds"""
+
+    hamming_distance_c = []
+    ciphertext_ls_c = []
+    r_key = random.getrandbits(16)
+    keyExp(r_key)
+    ciphertext = lazy_simplified(ptext)
+    ciphertext_ls_c.append(ciphertext)
+    # average hamming distance between ciphertexts
+    for i in range(1000):
+        error = 1 << random.randrange(16)
+        key_e = r_key ^ error  # flip a bit in the plaintext
+        keyExp(key_e)
+        ciphertext_ls_c.append(lazy_simplified(ptext))
+        hamming_distance_c.append(hamming(ciphertext_ls_c[i], ciphertext_ls_c[i + 1]))
+
+    avg_hamm_dist_c = np.array(hamming_distance_c).mean()
+    return avg_hamm_dist_c
+
+avg_hamm_dist = diffusion_four_lazy(key=key)
+avg_hamm_dist_c = confusion_four_lazy(ptext=plaintext)
+
+print('###########################################################')
+print('Simplified Lazy version of AES with four rounds:')
+print(f'Average Hamming distance (diffusion): {avg_hamm_dist}')
+print(f'Average Hamming distance (confusion): {avg_hamm_dist_c}')
+
+# =========================
+# four rounds very lazy
+# =========================
+
+# diffusion
+def diffusion_four_very_lazy(key, N=1000):
+    """diffusion property check: 4 rounds"""
+
+    hamming_distance_d = []
+    ciphertext_ls_d = []
+    keyExp(key)  # Key schedule algorithm: expanding key
+    plaintext_r = random.getrandbits(16)  # a random 16-bits plaintext
+    ciphertext = very_lazy_simplified(plaintext_r)  # simple AES encryption (just 2 round)
+    ciphertext_ls_d.append(ciphertext)
+
+    # average hamming distance between ciphertexts
+    for i in range(1000):
+        error = 1 << random.randrange(16)
+        plaintext_e = plaintext_r ^ error  # flip a bit in the plaintext
+        ciphertext_ls_d.append(very_lazy_simplified(plaintext_e))
+        hamming_distance_d.append(hamming(ciphertext_ls_d[i], ciphertext_ls_d[i + 1]))
+
+    avg_hamm_dist = np.array(hamming_distance_d).mean()  # 5.934
+    return avg_hamm_dist
+#confusion
+def confusion_four_very_lazy(ptext, N=1000):
+    """ confusion property check: four rounds"""
+
+    hamming_distance_c = []
+    ciphertext_ls_c = []
+    r_key = random.getrandbits(16)
+    keyExp(r_key)
+    ciphertext = very_lazy_simplified(ptext)
+    ciphertext_ls_c.append(ciphertext)
+    # average hamming distance between ciphertexts
+    for i in range(1000):
+        error = 1 << random.randrange(16)
+        key_e = r_key ^ error  # flip a bit in the plaintext
+        keyExp(key_e)
+        ciphertext_ls_c.append(very_lazy_simplified(ptext))
+        hamming_distance_c.append(hamming(ciphertext_ls_c[i], ciphertext_ls_c[i + 1]))
+
+    avg_hamm_dist_c = np.array(hamming_distance_c).mean()
+    return avg_hamm_dist_c
+
+avg_hamm_dist = diffusion_four_very_lazy(key=key)
+avg_hamm_dist_c = confusion_four_very_lazy(ptext=plaintext)
+
+print('###########################################################')
+print('Simplified Very Lazy version of AES with four rounds:')
+print(f'Average Hamming distance (diffusion): {avg_hamm_dist}')
+print(f'Average Hamming distance (confusion): {avg_hamm_dist_c}')
+
+
 
 
 
