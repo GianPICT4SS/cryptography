@@ -56,6 +56,7 @@ def confusion(ptext, N=1000):
 #====================
 
 key = 0b1100010101000110  # a 16-bits key
+key_ = 0b0100101011110101
 avg_hamm_dist = diffusion(key=key)
 
 #============
@@ -255,7 +256,7 @@ def diffusion_four_very_lazy(key, N=1000):
     return avg_hamm_dist
 #confusion
 def confusion_four_very_lazy(ptext, N=1000):
-    """ confusion property check: four rounds"""
+    """ confusion property check: four rounds (very lazy implemetation: MixColumns-ShiftRows and Addkey cancelled"""
 
     hamming_distance_c = []
     ciphertext_ls_c = []
@@ -277,11 +278,37 @@ def confusion_four_very_lazy(ptext, N=1000):
 avg_hamm_dist = diffusion_four_very_lazy(key=key)
 avg_hamm_dist_c = confusion_four_very_lazy(ptext=plaintext)
 
+"""in general, as expected, diffusion depends on mixcol-row, while confusion changes with addkey"""
 print('###########################################################')
 print('Simplified Very Lazy version of AES with four rounds:')
 print(f'Average Hamming distance (diffusion): {avg_hamm_dist}')
 print(f'Average Hamming distance (confusion): {avg_hamm_dist_c}')
 
+
+# ================================================================
+# Improperly implemented block cipher: decrypt ciphertext.txt
+# ================================================================
+known_plain = 0b0111001001101110
+with open('ciphertext.txt', 'r') as ct:
+    encryption = base64.b64decode(ct.read())
+
+print(f'type(encryption) = bytes: {encryption}')
+
+for i in range(len(encryption)-1):
+    cipher = (encryption[i] << 8) + encryption[i+1]
+
+if type(cipher) == int:
+    decr_cip = decrypt_foo(cipher)
+
+
+
+
+"""prova ad usare la chiave data prima nel lab per encriptare known_plain, trovi known_cipher?
+la descrizione sotto descrive le funzioni usate in encrypt_foo devi trovare il modo per tornare indietro.
+L'ultimo punto è da risolvere come nelle modalità di un CPA game: we know the plaintext and the relative ciphertext
+encrypted with the same key used for encrypting ciphertext.txt
+
+"""
 
 
 
