@@ -289,26 +289,23 @@ print(f'Average Hamming distance (confusion): {avg_hamm_dist_c}')
 # Improperly implemented block cipher: decrypt ciphertext.txt
 # ================================================================
 known_plain = 0b0111001001101110
+known_cipher = 0b0010111000001101
 with open('ciphertext.txt', 'r') as ct:
     encryption = base64.b64decode(ct.read())
 
-print(f'type(encryption) = bytes: {encryption}')
+print(f'type(encryption) = {type(encryption)}, value: {encryption}')
 
 for i in range(len(encryption)-1):
     cipher = (encryption[i] << 8) + encryption[i+1]
 
-if type(cipher) == int:
-    decr_cip = decrypt_foo(cipher)
+assert cipher == known_cipher
 
 
+state_1 = sub4NibList(sBox, intToVec(known_plain))
+state_2 = shiftRow(state_1)
+state_3 = intToVec(known_cipher)  # indeed, encryption_foo(ptext) return vecToInt(state_3)=known_cipher
 
 
-"""prova ad usare la chiave data prima nel lab per encriptare known_plain, trovi known_cipher?
-la descrizione sotto descrive le funzioni usate in encrypt_foo devi trovare il modo per tornare indietro.
-L'ultimo punto è da risolvere come nelle modalità di un CPA game: we know the plaintext and the relative ciphertext
-encrypted with the same key used for encrypting ciphertext.txt
-
-"""
 
 
 

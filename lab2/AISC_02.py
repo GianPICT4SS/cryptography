@@ -113,6 +113,7 @@ def encrypt(ptext):
         
     # first AddKey
     state = addKey(intToVec((w[0] << 8) + w[1]), intToVec(ptext))
+    print('state 1: ', state)
     # first round
     state = computeRound(w[2], w[3], state)
     # last round: NS-SR-AK
