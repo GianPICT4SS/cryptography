@@ -1,7 +1,9 @@
 import sys
 import os
 import time
-from random import randrange, getrandbits
+import json
+
+from random import randrange, getrandbits, randint
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
@@ -91,14 +93,61 @@ def decodeText(m, bitlen):
         mbytes += x.to_bytes(bytelen, byteorder='little')
     return mbytes.rstrip(b'\x00').decode('utf-8')
 
+def miller_rabin(n, k):
+    """Implementation uses the Miller-Rabin Primality Test. The optimal number of rounds for this test is 40"""
 
-    
+    if n == 2:
+        return True
+
+    if n % 2 == 0:
+        return False
+
+    r, s = 0, n - 1
+
+    while s % 2 == 0:
+        r += 1
+        s //= 2
+
+    for _ in range(k):
+
+        a = randrange(2, n - 1)
+
+        x = pow(a, s, n)
+
+        if x == 1 or x == n - 1:
+            continue
+
+        for _ in range(r - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+
+        else:
+            return False
+
+    return True
+
+
+def egcd(a, b):
+    if a == 0:
+        return (b, 0, 1)
+    else:
+        g, x, y = egcd(b % a, a)
+        return g, y - (b // a) * x, x
+
 def main():
     keylen = 1024
-    
-    p = generate_prime_candidate(keylen//2)
-    q = generate_prime_candidate(keylen//2)
-    # this is not a valid RSA modulo, p and q should be tested for primality!
+    p = 2
+    q = 2
+    while 1:
+        p = generate_prime_candidate(keylen//2)
+        if miller_rabin(p, k=100):
+            while 1:
+                q = generate_prime_candidate(keylen//2)
+                if miller_rabin(q, k=100):
+                    break
+            break
+
     N = p*q
     try:
         assert N.bit_length() == keylen
@@ -110,7 +159,23 @@ def main():
     print('p:', p)
     print('q:', q)
     print('N:', N)
-    
+    print('Generate a integer e relatively prime with (p-1)(q-1)')
+    phiN = (p-1)*(q-1)
+    e = randint((keylen // 2), (pow(2, 16)+1))
+    print(f'e: {e}')
+    g = 0
+    while g != 1:
+        g, x, y = egcd(e, phiN)
+
+
+
+    d = x % phiN  # private key
+    print(f'Found d = x & phiN = {d}')
+    assert (d*e) % phiN == 1
+
+
+
+
     
     s = "Today’s programs need to be able to handle a wide variety of characters. Applications are often internationalized to display messages and output in a variety of user-selectable languages; the same program might need to output an error message in English, French, Japanese, Hebrew, or Russian. Web content can be written in any of these languages and can also include a variety of emoji symbols. Python’s string type uses the Unicode Standard for representing characters, which lets Python programs work with all these different possible characters."
     
@@ -170,7 +235,16 @@ def main():
         print('decrypted message is:')
         print(plaintext.decode('utf-8'))
         sys.exit(1)
-    
+
+    print(f'Public Key: N = {N}, e = {e}')
+    print(f'Private Key: N = {N}, d = {d}')
+    dict_ = {'Public-Key': {'N': N, 'e': e},
+             'Private-key': {'N': N, 'd': d}}
+
+    with open('./config.json', 'w') as f:
+        msg = json.dumps(dict_)
+        f.write(msg)
+
     
     
     

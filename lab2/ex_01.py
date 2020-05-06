@@ -301,11 +301,28 @@ for i in range(len(encryption)-1):
 assert cipher == known_cipher
 
 
-state_1 = sub4NibList(sBox, intToVec(known_plain))
-state_2 = shiftRow(state_1)
-state_3 = intToVec(known_cipher)  # indeed, encryption_foo(ptext) return vecToInt(state_3)=known_cipher
+
+state_1_e = sub4NibList(sBox, intToVec(known_plain))
+state_2_e = shiftRow(state_1_e)
+state_3_e = intToVec(known_cipher)  # indeed, encryption_foo(ptext) return vecToInt(state_3)=known_cipher
 
 
+print(f'state_3_e: {state_3_e}, state_2_e: {state_2_e}')
+
+state_2_e_i = intToVec(state_2_e)
+
+
+
+
+def decrypt_foo(ctext):
+    """Decrypt ciphertext block"""
+
+    # invert last round: AK-SR-NS
+    state = addKey(intToVec((w[0] << 8) + w[1]), intToVec(ctext))
+    state = shiftRow(state)
+    state = sub4NibList(sBoxI, state)
+
+    return vecToInt(state)
 
 
 
