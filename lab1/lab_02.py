@@ -37,7 +37,7 @@ with open('ciphertexts/cryptogram03.txt', 'r') as f:
 
 
 def find_length_key(cipher_text=ciphertext, l_key=5):
-    """generate a subsequence of the cipertext by taking una letter every l_key letters.
+    """generate a subsequence of the cipertext by taking a letter every l_key letters.
     Compute the relative frequencies of the letters in the subsequence. Compute the score:
     S = sum(Q_i^2), where Q_i denotes the frequency of the ith letter."""
 

@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import json
+import base64
 
 from random import randrange, getrandbits, randint
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -19,6 +20,8 @@ gDH = 2
 qDH = 0x7FFFFFFFFFFFFFFFD6FC2A2C515DA54D57EE2B10139E9E78EC5CE2C1E7169B4AD4F09B208A3219FDE649CEE7124D9F7CBE97F1B1B1863AEC7B40D901576230BD69EF8F6AEAFEB2B09219FA8FAF83376842B1B2AA9EF68D79DAAB89AF3FABE49ACC278638707345BBF15344ED79F7F4390EF8AC509B56F39A98566527A41D3CBD5E0558C159927DB0E88454A5D96471FDDCB56D5BB06BFA340EA7A151EF1CA6FA572B76F3B1B95D8C8583D3E4770536B84F017E70E6FBF176601A0266941A17B0C8B97F4E74C2C1FFC7278919777940C1E1FF1D8DA637D6B99DDAFE5E17611002E2C778C1BE8B41D96379A51360D977FD4435A11C30942E4BFFFFFFFFFFFFFFFF
 
 
+#public-key DH
+pkDH_pr = 22664088293399527246507562223971354480481410734055255177531462288586795886517830315646434445460124785538258955582209692160331315207410411697170120097901401254513175680873776732101722626331745679197395954237627304657190041961193266279700659516940793816588173996186695766768802423421817213300014800970166816568744822938152065069637244574335593559747935057845165554511610562758374464161781573357599993290698717956296032739548687832084267131374577619480289453355393896762018250357505585172670763735741773991065828036669169136724219111015712061994130064707471581751165757881173379731131365966551412405892668877635983383830
 
 def encryptAESCTR(key, plaintext):
     """Encrypts plaintext using AES-CTR mode with given key
@@ -129,65 +132,90 @@ def miller_rabin(n, k):
 
 
 def egcd(a, b):
+    """Extended Euclidean Algorithm"""
     if a == 0:
-        return (b, 0, 1)
+        return b, 0, 1
     else:
         g, x, y = egcd(b % a, a)
         return g, y - (b // a) * x, x
 
-def main():
-    keylen = 1024
-    p = 2
-    q = 2
+def gen_RSA(keylen=1024):
+    """It generates a public-key (e,N) and a private-key (N, d) for RSA"""
     while 1:
-        p = generate_prime_candidate(keylen//2)
+        p = generate_prime_candidate(keylen // 2)
         if miller_rabin(p, k=100):
             while 1:
-                q = generate_prime_candidate(keylen//2)
+                q = generate_prime_candidate(keylen // 2)
                 if miller_rabin(q, k=100):
                     break
             break
 
-    N = p*q
+    N = p * q
     try:
         assert N.bit_length() == keylen
     except AssertionError:
         print('N generation error:')
         print('size of N is', N.bit_length(), 'bits instead of', keylen)
         sys.exit(1)
-        
+
     print('p:', p)
     print('q:', q)
     print('N:', N)
-    print('Generate a integer e relatively prime with (p-1)(q-1)')
-    phiN = (p-1)*(q-1)
-    e = randint((keylen // 2), (pow(2, 16)+1))
+    print('Generate a integer relatively prime with (p-1)(q-1)')
+    phiN = (p - 1) * (q - 1)
+    e = randint((keylen // 2), (pow(2, 16) + 1))
     print(f'e: {e}')
-    g = 0
+    g, x, y = egcd(e, phiN)
     while g != 1:
+        e = randint((keylen // 2), (pow(2, 16) + 1))
         g, x, y = egcd(e, phiN)
-
-
-
+    print(f'e: {e}')
     d = x % phiN  # private key
-    print(f'Found d = x & phiN = {d}')
-    assert (d*e) % phiN == 1
 
+    try:
+        assert (d * e) % phiN == 1
+        #dict_ = {'Public-Key': {'N': N, 'e': e},
+        #         'Private-key': {'N': N, 'd': d}}
 
+        #with open('./config.json', 'w') as f:
+        #    msg = json.dumps(dict_)
+        #    f.write(msg)
+    except:
+        print('d*e % phiN != 1')
+        sys.exit(1)
 
+    return p, q, N, e, d
 
-    
-    s = "Today’s programs need to be able to handle a wide variety of characters. Applications are often internationalized to display messages and output in a variety of user-selectable languages; the same program might need to output an error message in English, French, Japanese, Hebrew, or Russian. Web content can be written in any of these languages and can also include a variety of emoji symbols. Python’s string type uses the Unicode Standard for representing characters, which lets Python programs work with all these different possible characters."
-    
-    
-    print('s:', s)
+def diffie_hellman(p=pDH, g=gDH, q=qDH):
+
+    # choose a random x integer in the range 1<x<q-1
+
+    while True:
+        x = int.from_bytes(os.urandom(256), byteorder='little')
+        if 1 < x < q-1:
+            break
+
+    # Public key
+    pk = pow(g, x, p)
+    return pk, x
+
+def complexity():
+
+    keylen = 1024
+    with open('text.txt', 'r') as f:
+        s = f.read()
+
+    #print(f's: {s}')
+    print(f'len(s): {len(s)}')
     m = encodeText(s, keylen)
-    print('m:', m)
+    print(f'm[1]:{m[0]} \n m[1]: {m[1]} \n len(m): {len(m)}')
+
     
     #integers in m can be safely encrypted using a RSA key on keylen bits
+
     
     s2 = decodeText(m, keylen)
-    print('decoded m:', s2)
+    #print('decoded m:', s2)
     try:
         assert s == s2
     except AssertionError:
@@ -197,9 +225,8 @@ def main():
         print('decoded message is:')
         print(s2)
         sys.exit(1)
-    
 
-    
+
     key = os.urandom(16)
     plaintext = s.encode('utf-8')
     
@@ -236,17 +263,70 @@ def main():
         print(plaintext.decode('utf-8'))
         sys.exit(1)
 
-    print(f'Public Key: N = {N}, e = {e}')
-    print(f'Private Key: N = {N}, d = {d}')
-    dict_ = {'Public-Key': {'N': N, 'e': e},
-             'Private-key': {'N': N, 'd': d}}
 
-    with open('./config.json', 'w') as f:
-        msg = json.dumps(dict_)
-        f.write(msg)
+    print('********** RSA Complexity**********')
+    print('Key generation (KG):')
+    start_0 = time.time()
+    p, q, N, e, d = gen_RSA()
+    elapsed = time.time() - start_0
+    print(f'elapsed KG: {elapsed}')
+    #print('Encryption:')
+    start = time.time()
+    print('encryption started')
+    c = []
+    for x in m:
+        c.append(pow(x, e, N))
+    elapsed = time.time() - start
+    print(f'Encryption: {elapsed}')
+    print('Decryption')
+    start = time.time()
+    m = []
+    for x in c:
+        m.append(pow(x, d, N))
+    s_e = decodeText(m, keylen)
+    assert s_e == s
+    elapsed = time.time()-start
+    print(f'decryption: {elapsed}')
+    print(f'RSA Total time elapsed: {time.time()-start_0}')
+
+    print('DH Key-exchange')
+    print('KEY EXCHANGE')
+    start_0 = time.time()
+    pk_1, x_1 = diffie_hellman()
+    pk_2, x_2 = diffie_hellman()
+    prk_1 = pow(pk_2, x_1, pDH)
+    prk_2 = pow(pk_1, x_2, pDH)
+    prk_1 = (prk_1 & ((1 << 128)-1)).to_bytes(16, byteorder='little')
+    prk_2 = (prk_2 & ((1 << 128) - 1)).to_bytes(16, byteorder='little')
+    elapsed = time.time()-start_0
+    print(f'key exchange: {elapsed}')
+    print('Encryption')
+    start = time.time()
+    iv_1, c_1 = encryptAESCTR(prk_1, s.encode('utf-8'))
+    elapsed = time.time()-start
+    print(f'encryption elapsed: {elapsed}')
+    print('Decryption')
+    start = time.time()
+    p = decryptAESCTR(prk_1, iv_1, c_1)
+    elapsed = time.time()-start
+    print(f'elapsed: {elapsed}')
+    print(f'DH key-exchange total elapsed: {time.time()-start_0}')
+
+
+
+
+
+
 
     
-    
+
+
+
     
 if __name__ == '__main__':
-    main()
+
+    N_p = 84679728665601623534964724907925515929006540043189517481604602443064696359792213876789134073333039587280256381629121330309212710075084136072434602842735932397920567074126295940793758270599694063151970957022891161811181118800418280560581409959172714364916927401331291518944188508877716559336163266657183044021
+    e_p = 65537
+    #p, q, N, e, d = gen_e_d()
+    #pk, x = diffie_hellman()
+    complexity()

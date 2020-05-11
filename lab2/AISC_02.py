@@ -277,7 +277,7 @@ def very_lazy_simplified(ptext):
     # third round
     state = computeRound_lazy(w[0], w[1], state)
     # last round: NS-SR-AK
-    state = sub4NibList(sBox, state)
+    #state = sub4NibList(sBox, state)
     #state = shiftRow(state)
     state = addKey(intToVec((w[0] << 8) + w[1]), state)
 
