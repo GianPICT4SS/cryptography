@@ -293,35 +293,36 @@ known_cipher = 0b0010111000001101
 with open('ciphertext.txt', 'r') as ct:
     encryption = base64.b64decode(ct.read())
 
-print(f'type(encryption) = {type(encryption)}, value: {encryption}')
-
-for i in range(len(encryption)-1):
-    cipher = (encryption[i] << 8) + encryption[i+1]
-
-assert cipher == known_cipher
-
+# find the key exploiting a KPA
 state_1_e = sub4NibList(sBox, intToVec(known_plain))
 state_2_e = shiftRow(state_1_e)
 state_3_e = intToVec(known_cipher)  # indeed, encryption_foo(ptext) return vecToInt(state_3)=known_cipher
-
 print(f'state_3_e: {state_3_e}, state_2_e: {state_2_e}')
-
 key_p = vecToInt(state_3_e) ^ vecToInt(state_2_e)
 assert key_p == 29063
 
 keyExp(key_p)
-c_prova = encrypt_foo(known_plain)
-assert c_prova == known_cipher
+cipher = []
+plain = []
+for i in range(len(encryption)-1):
+    cipher.append(encryption[i] + encryption[i+1])
+    #plain.append(decrypt_foo((encryption[i] << 8) + encryption[i+1]))
+    #plain.append(decrypt_foo(encryption[i] << 8))
+    plain.append(decrypt_foo(encryption[i]))
 
-pl = decrypt_foo(c_prova)
+plain_byte = bytearray()
 
-encr = bytearray()
+for p in plain:
+    plain_byte.append(((p & 0xff00) >> 8))
+    plain_byte.append(p & 0x00ff)
 
-b = bin(c_prova)
-for i in range(len(b)):
-    encr.append(int(b[i])<<8-(int(b[i])+1))
 
-encr_ = base64.b64encode(encr)
+sol = base64.b64encode(plain_byte).decode('utf-8')
+
+
+
+
+
 
 
 
