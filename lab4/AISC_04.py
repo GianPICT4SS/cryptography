@@ -1,6 +1,7 @@
 import hashlib
 import os
 import secrets
+import random
 
 
      
@@ -34,7 +35,55 @@ def modinv(a, m):
     else:
         return x % m
 
-    
+
+def check_collision(n):
+    # n is the number of bit length of the input msg
+
+    C_1 = C_2 = 0
+    H = hashlib.sha256()
+    x = secrets.randbits(n+8)
+    print(f'random number: {x}')
+    n_byte = int(n/8) + 1
+    assert type(n_byte) == int
+    x_0 = x.to_bytes(n_byte, byteorder='big')
+    print(f'bytearray of x: {x_0}')
+    H.update(x_0)
+    x_1 = H.digest()  # Hash of x_0
+    print(f'Hash of {x_0}: {x_1}')
+    print(f'x_1: {x_1}')
+    H.update(x_1)
+    x_2 = H.digest()  # Hash of x_1
+    print(f'Hash of {x_1}: {x_2}')
+    while x_1 != x_2:
+        H.update(x_1)
+        x_1 = H.digest()  # H(x_1)
+        x_1 = x_1[:1]
+        H.update(x_2)
+        x_2 = H.digest()  # H(x_2)
+        x_2 = x_2[:1]
+        C_1 += 1
+        print(f'C_1: {C_1}')
+
+    x_1 = x_0
+    H.update(x_1)
+    x_1 = H.digest()
+    H.update(x_2)
+    x_2 = H.digest()
+    while x_1 != x_2:
+        H.update(x_1)
+        x_1 = H.digest()
+        x_1 = x_1[:1]
+        H.update(x_2)
+        x_2 = H.digest()
+        x_2 = x_2[:1]
+        C_2 += 1
+        print(f'C_2: {C_2}')
+
+    return C_1, C_2
+
+
+
+
     
 
 def main():
@@ -45,10 +94,17 @@ def main():
     m = hashlib.sha256()
     m.update(message)
     hash = m.digest()
+
+    m.update(b"Ciaone")
+    hash_1 = m.digest()
     
-    print('hash of', message, 'is:', hash)
+    print(f'hash of {message} is {hash}, instead hash_2: {hash_1}')
     print('32 bit hash is:', hash[:4])
     print('64 bit hash is:', hash[:8])
+
+
+    c0, c1 = check_collision(n=8*32)
+    print(f'c0= {c0}, c1= {c1}')
     
    
     
