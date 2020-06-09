@@ -80,7 +80,7 @@ def check_collision(n, k):
 
         # Now H^i(x_0) == H^{2i}(x_0)
         x_1 = x_0
-        # Loop until they math again ...
+        # Loop until they match again ...
         while x_1 != x_2:
             m0 = x_1
             x_1 = get_x_bytes_of_hash(x_1, z+1)

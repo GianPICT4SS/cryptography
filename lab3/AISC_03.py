@@ -199,6 +199,8 @@ def diffie_hellman(p=pDH, g=gDH, q=qDH):
     pk = pow(g, x, p)
     return pk, x
 
+
+
 def complexity():
 
     keylen = 1024
@@ -208,7 +210,7 @@ def complexity():
     #print(f's: {s}')
     print(f'len(s): {len(s)}')
     m = encodeText(s, keylen)
-    print(f'm[1]:{m[0]} \n m[1]: {m[1]} \n len(m): {len(m)}')
+    #print(f'm[1]:{m[0]} \n m[1]: {m[1]} \n len(m): {len(m)}')
 
     
     #integers in m can be safely encrypted using a RSA key on keylen bits
