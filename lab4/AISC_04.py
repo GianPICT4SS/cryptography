@@ -57,18 +57,19 @@ def check_collision(n, k):
     m0 = None
     m1 = None
 
-    #initial string
-    x = secrets.randbits(n+8)
-    x_0 = get_bytesArray_from_int(n, x)
-    print(f'bytearray of x: {x_0}')
+    # initial string
+    x = secrets.randbits(n + 8)
 
-    # get 4 bytes of hash x_0 and x_1
-    x_1 = get_x_bytes_of_hash(x_0, 4)
-    x_2 = get_x_bytes_of_hash(x_1, 4)
-    print(f'Initial Hash of {x_1}: {x_2}')
     for z in range(k):
         C_1[z+1] = 0
         C_2[z+1] = 0
+
+        x_0 = get_bytesArray_from_int(n, x)
+        print(f'bytearray of x: {x_0} \n x len bit: {x.bit_length()}')
+
+        # get 4 bytes of hash x_0 and x_1
+        x_1 = get_x_bytes_of_hash(x_0, z+1)
+        x_2 = get_x_bytes_of_hash(x_1, z+1)
         # loop until our hashes are equal
         while x_1 != x_2:
             x_1 = get_x_bytes_of_hash(x_1, z+1)
@@ -76,11 +77,13 @@ def check_collision(n, k):
             C_1[z+1] += 1
         # Now H^i(x_0) == H^{2i}(x_0)
         print(f'H^i(x_0): {x_1}, H^(2i)(x_0) = {x_2}')
-        print(f'found collision in {z+1} bytes strings after: {C_1[z+1]} tries')
+        print(f'found collision in {z+1} bytes string after: {C_1[z+1]} tries')
 
         # Now H^i(x_0) == H^{2i}(x_0)
         x_1 = x_0
         # Loop until they match again ...
+        x_1 = get_x_bytes_of_hash(x_1, z+1)
+        x_2 = get_x_bytes_of_hash(x_2, z+1)
         while x_1 != x_2:
             m0 = x_1
             x_1 = get_x_bytes_of_hash(x_1, z+1)
@@ -88,13 +91,13 @@ def check_collision(n, k):
             C_2[z+1] += 1
         print(f'the first {z+1} bytes of the sha256 hash of {m0} are equal to {x_2}')
 
-        x_2 = get_x_bytes_of_hash(x_1, z+1)
-        while x_1 != x_2:
-            m1 = x_2
-            x_2 = get_x_bytes_of_hash(x_2, z+1)
-        print(f'the first {z+1} bytes of the sha256 hash of {m1} are equal to {x_2}')
-        x_1 = get_x_bytes_of_hash(x_0, z+1)
-        x_2 = get_x_bytes_of_hash(x_1, z+1)
+        #x_2 = get_x_bytes_of_hash(x_1, z+1)
+        #while x_1 != x_2:
+        #    m1 = x_2
+        #    x_2 = get_x_bytes_of_hash(x_2, z+1)
+        #print(f'the first {z+1} bytes of the sha256 hash of {m1} are equal to {x_2}')
+        #x_1 = get_x_bytes_of_hash(x_0, z+1)
+        #x_2 = get_x_bytes_of_hash(x_1, z+1)
 
     print(f'm0: {m0}, m1: {m1}, C0: {C_1}, C1: {C_2}')
     return C_1, C_2, m0, m1
@@ -131,7 +134,7 @@ def main():
     print('64 bit hash is:', hash[:8])
 
     start = time.time()
-    c0, c1, m0, m1 = check_collision(n=8*32, k=4)
+    c0, c1, m0, m1 = check_collision(n=16, k=4)
     elapsed = time.time() - start
     print(f'c0= {c0}, c1= {c1}; elapsed time: {elapsed}')
     return c0, c1, m0, m1
