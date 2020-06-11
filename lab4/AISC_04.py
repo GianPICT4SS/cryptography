@@ -4,6 +4,7 @@ import os
 import secrets
 import random
 import time
+import numpy as np
 
 
      
@@ -54,15 +55,20 @@ def check_collision(n, k):
 
     # counters
     C_1 = C_2 = {}
+    uC_1 = uC_2 = {}
+
     m0 = None
     m1 = None
 
     # initial string
     x = secrets.randbits(n + 8)
 
+
     for z in range(k):
         C_1[z+1] = 0
         C_2[z+1] = 0
+        uC_1[z+1] = 0
+        uC_2[z+1] = 0
 
         x_0 = get_bytesArray_from_int(n, x)
         print(f'bytearray of x: {x_0} \n x len bit: {x.bit_length()}')
@@ -70,26 +76,42 @@ def check_collision(n, k):
         # get 4 bytes of hash x_0 and x_1
         x_1 = get_x_bytes_of_hash(x_0, z+1)
         x_2 = get_x_bytes_of_hash(x_1, z+1)
+        ux_1 = universal_hash(msg=x_0, digest_length=z+1)
+        ux_2 = universal_hash(msg=ux_1, digest_length=z+1)
         # loop until our hashes are equal
         while x_1 != x_2:
             x_1 = get_x_bytes_of_hash(x_1, z+1)
             x_2 = get_x_bytes_of_hash(get_x_bytes_of_hash(x_2, z+1), z+1)
             C_1[z+1] += 1
+        print(f'type {ux_1}: {type(ux_1)}')
+        while ux_1 != ux_2:
+            ux_1 = universal_hash(ux_1, digest_length=z+1)
+            ux_2 = universal_hash(msg=universal_hash(ux_2, digest_length=z+1), digest_length=z+1)
+            uC_1[z+1] += 1
         # Now H^i(x_0) == H^{2i}(x_0)
         print(f'H^i(x_0): {x_1}, H^(2i)(x_0) = {x_2}')
         print(f'found collision in {z+1} bytes string after: {C_1[z+1]} tries')
 
         # Now H^i(x_0) == H^{2i}(x_0)
         x_1 = x_0
+        ux_1 = x_0
         # Loop until they match again ...
         x_1 = get_x_bytes_of_hash(x_1, z+1)
         x_2 = get_x_bytes_of_hash(x_2, z+1)
+        ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
+        ux_2 = universal_hash(msg=ux_2, digest_length=z+1)
         while x_1 != x_2:
             m0 = x_1
             x_1 = get_x_bytes_of_hash(x_1, z+1)
             x_2 = get_x_bytes_of_hash(x_2, z+1)
             C_2[z+1] += 1
         print(f'the first {z+1} bytes of the sha256 hash of {m0} are equal to {x_2}')
+
+        while ux_1 != ux_2:
+            ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
+            ux_2 = universal_hash(msg=ux_2, digest_length=z+1)
+            uC_2[z+1] += 1
+
 
         #x_2 = get_x_bytes_of_hash(x_1, z+1)
         #while x_1 != x_2:
@@ -100,7 +122,8 @@ def check_collision(n, k):
         #x_2 = get_x_bytes_of_hash(x_1, z+1)
 
     print(f'm0: {m0}, m1: {m1}, C0: {C_1}, C1: {C_2}')
-    return C_1, C_2, m0, m1
+
+    return C_1, C_2, m0, m1, uC_1, uC_2
 
 
 def universal_hash(a=aU, b=bU, q=qDSA, msg=b'SHA-256 is a cryptographic hash function', digest_length=2):
@@ -109,7 +132,7 @@ def universal_hash(a=aU, b=bU, q=qDSA, msg=b'SHA-256 is a cryptographic hash fun
     h = (a*m + b) % q
     assert h.bit_length() <= q.bit_length()
     hash = h.to_bytes(int(q.bit_length()/8), byteorder='big')
-    return hash
+    return hash[:digest_length]
 
 
 
@@ -134,9 +157,9 @@ def main():
     print('64 bit hash is:', hash[:8])
 
     start = time.time()
-    c0, c1, m0, m1 = check_collision(n=16, k=4)
+    c0, c1, m0, m1, uC1, uC2 = check_collision(n=4*32, k=4)
     elapsed = time.time() - start
-    print(f'c0= {c0}, c1= {c1}; elapsed time: {elapsed}')
+    print(f'c0= {c0}, c1= {c1}; elapsed time: {elapsed} \n uc1={uC1}, uc2={uC2}')
     return c0, c1, m0, m1
     
    
@@ -145,4 +168,4 @@ def main():
 if __name__ == '__main__':
     uh = universal_hash()
     print(f'Universal hash digest: {uh}')
-    c0, c1, m0, m1 = main()
+    c0, c1, m0, m1, uC1, uC2 = main()
