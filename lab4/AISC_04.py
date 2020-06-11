@@ -64,6 +64,8 @@ def check_collision(n, k):
     x = secrets.randbits(n + 8)
 
 
+
+
     for z in range(k):
         C_1[z+1] = 0
         C_2[z+1] = 0
@@ -78,19 +80,21 @@ def check_collision(n, k):
         x_2 = get_x_bytes_of_hash(x_1, z+1)
         ux_1 = universal_hash(msg=x_0, digest_length=z+1)
         ux_2 = universal_hash(msg=ux_1, digest_length=z+1)
+
         # loop until our hashes are equal
         while x_1 != x_2:
             x_1 = get_x_bytes_of_hash(x_1, z+1)
             x_2 = get_x_bytes_of_hash(get_x_bytes_of_hash(x_2, z+1), z+1)
             C_1[z+1] += 1
-        print(f'type {ux_1}: {type(ux_1)}')
+
         while ux_1 != ux_2:
-            ux_1 = universal_hash(ux_1, digest_length=z+1)
-            ux_2 = universal_hash(msg=universal_hash(ux_2, digest_length=z+1), digest_length=z+1)
+            ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
+            ux_2 = universal_hash(msg=universal_hash(msg=ux_2, digest_length=z+1), digest_length=z+1)
             uC_1[z+1] += 1
         # Now H^i(x_0) == H^{2i}(x_0)
         print(f'H^i(x_0): {x_1}, H^(2i)(x_0) = {x_2}')
         print(f'found collision in {z+1} bytes string after: {C_1[z+1]} tries')
+        print(f'UHash: found collision in {z + 1} bytes string after: {uC_1[z + 1]} tries')
 
         # Now H^i(x_0) == H^{2i}(x_0)
         x_1 = x_0
@@ -107,10 +111,14 @@ def check_collision(n, k):
             C_2[z+1] += 1
         print(f'the first {z+1} bytes of the sha256 hash of {m0} are equal to {x_2}')
 
+
         while ux_1 != ux_2:
             ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
             ux_2 = universal_hash(msg=ux_2, digest_length=z+1)
             uC_2[z+1] += 1
+
+        print(f'found collision in {z + 1} bytes string after: {C_2[z + 1]} tries')
+        print(f'UHash: found collision in {z + 1} bytes string after: {uC_2[z + 1]} tries')
 
 
         #x_2 = get_x_bytes_of_hash(x_1, z+1)
@@ -128,7 +136,9 @@ def check_collision(n, k):
 
 def universal_hash(a=aU, b=bU, q=qDSA, msg=b'SHA-256 is a cryptographic hash function', digest_length=2):
 
+
     m = int.from_bytes(msg, byteorder='big')
+
     h = (a*m + b) % q
     assert h.bit_length() <= q.bit_length()
     hash = h.to_bytes(int(q.bit_length()/8), byteorder='big')
@@ -160,7 +170,7 @@ def main():
     c0, c1, m0, m1, uC1, uC2 = check_collision(n=4*32, k=4)
     elapsed = time.time() - start
     print(f'c0= {c0}, c1= {c1}; elapsed time: {elapsed} \n uc1={uC1}, uc2={uC2}')
-    return c0, c1, m0, m1
+    return c0, c1, m0, m1, uC1, uC2
     
    
     
