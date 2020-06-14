@@ -1,6 +1,7 @@
 import hashlib
 import secrets
 import time
+import numpy as np
 
 
 
@@ -17,7 +18,7 @@ qDSA = 0x996F967F6C8E388D9E28D01E205FBA957A5698B1
 
 gDSA = 0x07B0F92546150B62514BB771E2A0C0CE387F03BDA6C56B505209FF25FD3C133D89BBCD97E904E09114D9A7DEFDEADFC9078EA544D2E401AEECC40BB9FBBF78FD87995A10A1C27CB7789B594BA7EFB5C4326A9FE59A070E136DB77175464ADCA417BE5DCE2F40D10A46A3A3943F26AB7FD9C0398FF8C76EE0A56826A8A88F1DBD
 
-
+# Schnorr Scheme
 def schnorr_definition(p=pDSA, q=qDSA, g=gDSA):
 
     print('Schnorr Definition')
@@ -66,10 +67,6 @@ def schnorr_verification(y, r, s, msg=b'Digital signature using the Schnorr sche
     print('Done!')
 
 
-
-
-
-
 def egcd(a, b):
     """computes g, x, y such that g = GCD(a, b) and x*a + y*b = g"""
     if a == 0:
@@ -95,14 +92,14 @@ def get_bytesArray_from_int(n_bits, x):
     n_byte = int(n_bits/8) + 1
     return x.to_bytes(n_byte, byteorder='big')
 
-
-
 def check_collision(n, k):
     # n is the number of bit length of the input msg
 
     # counters
-    C_1 = C_2 = {}
-    uC_1 = uC_2 = {}
+    C_1 = {}
+    C_2 = {}
+    uC_1 = {}
+    uC_2 = {}
 
     m0 = None
     m1 = None
@@ -110,76 +107,81 @@ def check_collision(n, k):
     # initial string
     x = secrets.randbits(n + 8)
 
+    stats = {'C1': {1: [], 2: [], 3: [], 4: []}, 'C2': {1: [], 2: [], 3: [], 4: []}, 'uC1': {1: [], 2: [], 3: [], 4: []}
+        , 'uC2': {1: [], 2: [], 3: [], 4: []}}
 
 
+    for i in range(20):
+        for z in range(k):
 
-    for z in range(k):
-        C_1[z+1] = 0
-        C_2[z+1] = 0
-        uC_1[z+1] = 0
-        uC_2[z+1] = 0
+            C_1[z+1] = 0
+            C_2[z+1] = 0
+            uC_1[z+1] = 0
+            uC_2[z+1] = 0
+            x_0 = get_bytesArray_from_int(n, x)
+            print(f'bytearray of x: {x_0} \n x len bit: {x.bit_length()}')
 
-        x_0 = get_bytesArray_from_int(n, x)
-        print(f'bytearray of x: {x_0} \n x len bit: {x.bit_length()}')
+            # get 4 bytes of hash x_0 and x_1
+            x_1 = get_x_bytes_of_hash(x_0, z+1)
+            x_2 = get_x_bytes_of_hash(x_1, z+1)
+            ux_1 = universal_hash(msg=x_0, digest_length=z+1)
+            ux_2 = universal_hash(msg=ux_1, digest_length=z+1)
 
-        # get 4 bytes of hash x_0 and x_1
-        x_1 = get_x_bytes_of_hash(x_0, z+1)
-        x_2 = get_x_bytes_of_hash(x_1, z+1)
-        ux_1 = universal_hash(msg=x_0, digest_length=z+1)
-        ux_2 = universal_hash(msg=ux_1, digest_length=z+1)
+            # loop until our hashes are equal
+            while x_1 != x_2:
+                x_1 = get_x_bytes_of_hash(x_1, z+1)
+                x_2 = get_x_bytes_of_hash(get_x_bytes_of_hash(x_2, z+1), z+1)
+                C_1[z+1] += 1
 
-        # loop until our hashes are equal
-        while x_1 != x_2:
-            x_1 = get_x_bytes_of_hash(x_1, z+1)
-            x_2 = get_x_bytes_of_hash(get_x_bytes_of_hash(x_2, z+1), z+1)
-            C_1[z+1] += 1
+            while ux_1 != ux_2:
+                ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
+                ux_2 = universal_hash(msg=universal_hash(msg=ux_2, digest_length=z+1), digest_length=z+1)
+                uC_1[z+1] += 1
+            # Now H^i(x_0) == H^{2i}(x_0)
+            print(f'H^i(x_0): {x_1}, H^(2i)(x_0) = {x_2}')
+            print(f'found collision in {z+1} bytes string after: {C_1[z+1]} tries')
+            print(f'UHash: found collision in {z + 1} bytes string after: {uC_1[z + 1]} tries')
 
-        while ux_1 != ux_2:
-            ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
-            ux_2 = universal_hash(msg=universal_hash(msg=ux_2, digest_length=z+1), digest_length=z+1)
-            uC_1[z+1] += 1
-        # Now H^i(x_0) == H^{2i}(x_0)
-        print(f'H^i(x_0): {x_1}, H^(2i)(x_0) = {x_2}')
-        print(f'found collision in {z+1} bytes string after: {C_1[z+1]} tries')
-        print(f'UHash: found collision in {z + 1} bytes string after: {uC_1[z + 1]} tries')
-
-        # Now H^i(x_0) == H^{2i}(x_0)
-        x_1 = x_0
-        ux_1 = x_0
-        # Loop until they match again ...
-        x_1 = get_x_bytes_of_hash(x_1, z+1)
-        x_2 = get_x_bytes_of_hash(x_2, z+1)
-        ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
-        ux_2 = universal_hash(msg=ux_2, digest_length=z+1)
-        while x_1 != x_2:
-            m0 = x_1
+            # Now H^i(x_0) == H^{2i}(x_0)
+            x_1 = x_0
+            ux_1 = x_0
+            # Loop until they match again ...
             x_1 = get_x_bytes_of_hash(x_1, z+1)
             x_2 = get_x_bytes_of_hash(x_2, z+1)
-            C_2[z+1] += 1
-        print(f'the first {z+1} bytes of the sha256 hash of {m0} are equal to {x_2}')
-
-
-        while ux_1 != ux_2:
             ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
             ux_2 = universal_hash(msg=ux_2, digest_length=z+1)
-            uC_2[z+1] += 1
+            while x_1 != x_2:
+                m0 = x_1
+                x_1 = get_x_bytes_of_hash(x_1, z+1)
+                x_2 = get_x_bytes_of_hash(x_2, z+1)
+                C_2[z+1] += 1
+            print(f'the first {z+1} bytes of the sha256 hash of {m0} are equal to {x_2}')
 
-        print(f'found collision in {z + 1} bytes string after: {C_2[z + 1]} tries')
-        print(f'UHash: found collision in {z + 1} bytes string after: {uC_2[z + 1]} tries')
+
+            while ux_1 != ux_2:
+                ux_1 = universal_hash(msg=ux_1, digest_length=z+1)
+                ux_2 = universal_hash(msg=ux_2, digest_length=z+1)
+                uC_2[z+1] += 1
+
+            print(f'found collision in {z + 1} bytes string after: {C_2[z + 1]} tries')
+            print(f'UHash: found collision in {z + 1} bytes string after: {uC_2[z + 1]} tries')
+
+            stats['C1'][z+1].append(C_1[z+1])
+            stats['C2'][z+1].append(C_2[z+1])
+            stats['uC1'][z+1].append(uC_1[z+1])
+            stats['uC2'][z+1].append(uC_2[z+1])
+        x = secrets.randbits(n + 8)
 
 
-        #x_2 = get_x_bytes_of_hash(x_1, z+1)
-        #while x_1 != x_2:
-        #    m1 = x_2
-        #    x_2 = get_x_bytes_of_hash(x_2, z+1)
-        #print(f'the first {z+1} bytes of the sha256 hash of {m1} are equal to {x_2}')
-        #x_1 = get_x_bytes_of_hash(x_0, z+1)
-        #x_2 = get_x_bytes_of_hash(x_1, z+1)
+    c1 = {1: np.mean(stats['C1'][1]), 2: np.mean(stats['C1'][2]), 3: np.mean(stats['C1'][3]), 4: np.mean(stats['C1'][4])}
+    c2 = {1: np.mean(stats['C2'][1]), 2: np.mean(stats['C2'][2]), 3: np.mean(stats['C2'][3]),
+          4: np.mean(stats['C2'][4])}
+    uc1 = {1: np.mean(stats['uC1'][1]), 2: np.mean(stats['uC1'][2]), 3: np.mean(stats['uC1'][3]),
+          4: np.mean(stats['uC1'][4])}
+    uc2 = {1: np.mean(stats['uC2'][1]), 2: np.mean(stats['uC2'][2]), 3: np.mean(stats['uC2'][3]),
+          4: np.mean(stats['uC2'][4])}
 
-    print(f'm0: {m0}, m1: {m1}, C0: {C_1}, C1: {C_2}')
-
-    return C_1, C_2, m0, m1, uC_1, uC_2
-
+    return c1, c2, uc1, uc2, stats
 
 def universal_hash(a=aU, b=bU, q=qDSA, msg=b'SHA-256 is a cryptographic hash function', digest_length=2):
 
@@ -191,11 +193,48 @@ def universal_hash(a=aU, b=bU, q=qDSA, msg=b'SHA-256 is a cryptographic hash fun
     hash = h.to_bytes(int(q.bit_length()/8), byteorder='big')
     return hash[:digest_length]
 
+def check_uHashCollision(n):
+    # n is the number of bit length of the input msg
 
+    # counters
+    uC_1 = uC_2 = 0
 
+    m0 = None
+    m1 = None
 
+    # initial string
+    x = secrets.randbits(n + 8)
+    x_0 = get_bytesArray_from_int(n, x)
+    print(f'bytearray of x: {x_0} \n x len bit: {x.bit_length()}')
+    # get 4 bytes of hash x_0 and x_1
+    ux_1 = universal_hash(msg=x_0, digest_length=20)
+    ux_2 = universal_hash(msg=ux_1, digest_length=20)
+    # loop until our hashes are equal
+    while ux_1 != ux_2:
+        m0 = ux_1
+        ux_1 = get_x_bytes_of_hash(ux_1, 20)
+        ux_2 = get_x_bytes_of_hash(get_x_bytes_of_hash(ux_2, 20), 20)
+        uC_1 += 1
 
-    
+    # Now H^i(x_0) == H^{2i}(x_0)
+    print('Exit from first while.')
+    print(f'Hash of string {m0}: H^i(x_0): {ux_1}, H^(2i)(x_0) = {ux_2}')
+    print(f'UHash: found collision in 20 bytes string after: {uC_1} tries')
+
+    # Now H^i(x_0) == H^{2i}(x_0)
+    ux_1 = x_0
+
+    # Loop until they match again ...
+    ux_1 = universal_hash(msg=ux_1, digest_length=20)
+    ux_2 = universal_hash(msg=ux_2, digest_length=20)
+    while ux_1 != ux_2:
+        m1 = ux_1
+        ux_1 = universal_hash(msg=ux_1, digest_length=20)
+        ux_2 = universal_hash(msg=ux_2, digest_length=20)
+        uC_2 += 1
+    print(f'UHash: found collision in 20 bytes string after: {uC_2} tries')
+    print(f'Hash of string {m1}: 1: {ux_1}, 2: {ux_2}')
+
 
 def main():
     print('(p-1) mod q:', (pDSA - 1) % qDSA)
@@ -214,28 +253,31 @@ def main():
     print('64 bit hash is:', hash[:8])
 
     start = time.time()
-    c0, c1, m0, m1, uC1, uC2 = check_collision(n=4*32, k=4)
+    c1, c2, uc1, uc2, stats = check_collision(n=4*32, k=4)
     elapsed = time.time() - start
-    print(f'c0= {c0}, c1= {c1}; elapsed time: {elapsed} \n uc1={uC1}, uc2={uC2}')
-    return c0, c1, m0, m1, uC1, uC2
-    
-   
-    
+    print(f'c1= {c1}, c2= {c2}; elapsed time: {elapsed} \n uc1={uc1}, uc2={uc2}')
+    #print('Check 20 bytes collision of Universal Hash...')
+    #start = time.time()
+    #check_uHashCollision(n=4*20)
+    #elapsed = time.time()-start
+    #print(f'elapsed: {elapsed}')
+    return c1, c2, uc1, uc2, stats
+
 
 if __name__ == '__main__':
     uh = universal_hash()
     print(f'Universal hash digest: {uh}')
-    #c0, c1, m0, m1, uC1, uC2 = main()
-    x, y = schnorr_definition()
-    r, s = schnorr_signature(x=x)
-    schnorr_verification(y=y, r=r, s=s)
+    c1, c2, uC1, uC2, stats = main()
+    #x, y = schnorr_definition()
+    #r, s = schnorr_signature(x=x)
+    #schnorr_verification(y=y, r=r, s=s)
 
-    yp = 42276637486569720268071647368550139276503521977640661888834825275517477780979914414339836061961635727800848465170706694019279805873893995587354694642526839889426158621140802827015533730771103146644607587713359225607432856473853326971226628964711099095487586928079612107255097386799478803704960241864601625828
-    msg1 = b'first message'
-    (r1, s1) = (299969984114895304388954029424480730263471439206, 192417049713099740312922361446986628497439105550)
-    schnorr_verification(y=yp, r=r1, s=s1, msg=msg1)
+    #yp = 42276637486569720268071647368550139276503521977640661888834825275517477780979914414339836061961635727800848465170706694019279805873893995587354694642526839889426158621140802827015533730771103146644607587713359225607432856473853326971226628964711099095487586928079612107255097386799478803704960241864601625828
+    #msg1 = b'first message'
+    #(r1, s1) = (299969984114895304388954029424480730263471439206, 192417049713099740312922361446986628497439105550)
+    #schnorr_verification(y=yp, r=r1, s=s1, msg=msg1)
 
-    msg2 = b'second message'
-    (r2, s2) = (719970963765961216949252326232207427282652913363, 107425968460827725118970802806887322358870342520)
+    #msg2 = b'second message'
+    #(r2, s2) = (719970963765961216949252326232207427282652913363, 107425968460827725118970802806887322358870342520)
 
-    schnorr_verification(y=yp, r=r2, s=s2, msg=msg2)
+    #schnorr_verification(y=yp, r=r2, s=s2, msg=msg2)
