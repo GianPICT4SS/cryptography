@@ -27,7 +27,7 @@ def schnorr_definition(p=pDSA, q=qDSA, g=gDSA):
     return x, y
 
 def schnorr_signature(x, p=pDSA, q=qDSA, g=gDSA, msg=b'Digital signature using the Schnorr scheme'):
-    """Compute a schnorr digital signature of a message using SHA-256 as hash function.
+    """Compute a Schnorr digital signature of a message using SHA-256 as hash function.
     x: private key
     y: public key
     """
@@ -36,32 +36,33 @@ def schnorr_signature(x, p=pDSA, q=qDSA, g=gDSA, msg=b'Digital signature using t
     k = secrets.randbelow(q-1)
     nbytes = (p.bit_length() + 7) // 8
     I = pow(g, k, p)
-    m = int.from_bytes(msg, byteorder='big')
-    m = I + m
-    r = hashlib.sha256(m.to_bytes(nbytes, byteorder='big')).digest()
-    r = int.from_bytes(r, byteorder='big')
-    r = r % p
+    #m = int.from_bytes(msg, byteorder='big')
+    I = I.to_bytes(nbytes, byteorder='big')
+    m = I + msg
+    #r = hashlib.sha256(m.to_bytes(nbytes, byteorder='big')).digest()
+    h = get_x_bytes_of_hash(m, 32)
+    h_ = int.from_bytes(h, byteorder='big')
+    r = h_ % q
     s = (k - r*x) % q
     print(f'Done: r: {r}, s: {s}')
     return r, s
 
-def schnorr_verification(y, r, s, p=pDSA, g=gDSA, msg=b'Digita signature using the Schnorr scheme'):
+def schnorr_verification(y, r, s, msg=b'Digital signature using the Schnorr scheme'):
 
-    print('Schnorr verification')
-    nbytes = (p.bit_length() + 7) // 8
-    g_ = pow(g, s, p)
-    y_ = pow(y, r, p)
-    print(f' g_: {g_}, y_: {y_}')
-    I = (g_*y_) % p
-
-    print(f'I: {I}')
-    m = int.from_bytes(msg, byteorder='big')
-    m = I + m
-    r_ = hashlib.sha256(m.to_bytes(nbytes, byteorder='big')).digest()
-    r_ = int.from_bytes(r_, byteorder='big')
-    assert r == r_
+    print(f'Schnorr verification. Message: {msg}')
+    nbytes = (pDSA.bit_length() + 7) // 8
+    g_ = pow(gDSA, s, pDSA)
+    y_ = pow(y, r, pDSA)
+    I = (g_*y_) % pDSA
+    I = I.to_bytes(nbytes, byteorder='big')
+    #m = int.from_bytes(msg, byteorder='big')
+    M = I + msg
+    h = get_x_bytes_of_hash(message=M, x=32)
+    r_ = int.from_bytes(h, byteorder='big')
+    v = r_ % qDSA
+    assert r == v
     print("Verification done: Digital Signature approved.")
-    print(f'r: {r}, r_: {r_}')
+    print(f'r: {r}, r_: {v}')
     print('Done!')
 
 
@@ -228,3 +229,13 @@ if __name__ == '__main__':
     x, y = schnorr_definition()
     r, s = schnorr_signature(x=x)
     schnorr_verification(y=y, r=r, s=s)
+
+    yp = 42276637486569720268071647368550139276503521977640661888834825275517477780979914414339836061961635727800848465170706694019279805873893995587354694642526839889426158621140802827015533730771103146644607587713359225607432856473853326971226628964711099095487586928079612107255097386799478803704960241864601625828
+    msg1 = b'first message'
+    (r1, s1) = (299969984114895304388954029424480730263471439206, 192417049713099740312922361446986628497439105550)
+    schnorr_verification(y=yp, r=r1, s=s1, msg=msg1)
+
+    msg2 = b'second message'
+    (r2, s2) = (719970963765961216949252326232207427282652913363, 107425968460827725118970802806887322358870342520)
+
+    schnorr_verification(y=yp, r=r2, s=s2, msg=msg2)
