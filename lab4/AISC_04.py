@@ -1,10 +1,7 @@
 import hashlib
-from hashlib import blake2b
-import os
 import secrets
-import random
 import time
-import numpy as np
+
 
 
      
@@ -19,6 +16,55 @@ pDSA = 0x86F5CA03DCFEB225063FF830A0C769B9DD9D6153AD91D7CE27F787C43278B447E6533B8
 qDSA = 0x996F967F6C8E388D9E28D01E205FBA957A5698B1
 
 gDSA = 0x07B0F92546150B62514BB771E2A0C0CE387F03BDA6C56B505209FF25FD3C133D89BBCD97E904E09114D9A7DEFDEADFC9078EA544D2E401AEECC40BB9FBBF78FD87995A10A1C27CB7789B594BA7EFB5C4326A9FE59A070E136DB77175464ADCA417BE5DCE2F40D10A46A3A3943F26AB7FD9C0398FF8C76EE0A56826A8A88F1DBD
+
+
+def schnorr_definition(p=pDSA, q=qDSA, g=gDSA):
+
+    print('Schnorr Definition')
+    x = secrets.randbelow(q-1)  # private key
+    y = pow(g, x, p)  # public key
+    print(f'Done: sk: {x}, pk: {y} ')
+    return x, y
+
+def schnorr_signature(x, p=pDSA, q=qDSA, g=gDSA, msg=b'Digital signature using the Schnorr scheme'):
+    """Compute a schnorr digital signature of a message using SHA-256 as hash function.
+    x: private key
+    y: public key
+    """
+
+    print('Schnorr signature')
+    k = secrets.randbelow(q-1)
+    nbytes = (p.bit_length() + 7) // 8
+    I = pow(g, k, p)
+    m = int.from_bytes(msg, byteorder='big')
+    m = I + m
+    r = hashlib.sha256(m.to_bytes(nbytes, byteorder='big')).digest()
+    r = int.from_bytes(r, byteorder='big')
+    r = r % p
+    s = (k - r*x) % q
+    print(f'Done: r: {r}, s: {s}')
+    return r, s
+
+def schnorr_verification(y, r, s, p=pDSA, g=gDSA, msg=b'Digita signature using the Schnorr scheme'):
+
+    print('Schnorr verification')
+    nbytes = (p.bit_length() + 7) // 8
+    g_ = pow(g, s, p)
+    y_ = pow(y, r, p)
+    print(f' g_: {g_}, y_: {y_}')
+    I = (g_*y_) % p
+
+    print(f'I: {I}')
+    m = int.from_bytes(msg, byteorder='big')
+    m = I + m
+    r_ = hashlib.sha256(m.to_bytes(nbytes, byteorder='big')).digest()
+    r_ = int.from_bytes(r_, byteorder='big')
+    assert r == r_
+    print("Verification done: Digital Signature approved.")
+    print(f'r: {r}, r_: {r_}')
+    print('Done!')
+
+
 
 
 
@@ -178,4 +224,7 @@ def main():
 if __name__ == '__main__':
     uh = universal_hash()
     print(f'Universal hash digest: {uh}')
-    c0, c1, m0, m1, uC1, uC2 = main()
+    #c0, c1, m0, m1, uC1, uC2 = main()
+    x, y = schnorr_definition()
+    r, s = schnorr_signature(x=x)
+    schnorr_verification(y=y, r=r, s=s)
