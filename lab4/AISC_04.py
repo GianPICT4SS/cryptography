@@ -33,7 +33,7 @@ def schnorr_signature(x, p=pDSA, q=qDSA, g=gDSA, msg=b'Digital signature using t
     y: public key
     """
 
-    print('Schnorr signature')
+    #print('Schnorr signature')
     k = secrets.randbelow(q-1)
     nbytes = (p.bit_length() + 7) // 8
     I = pow(g, k, p)
@@ -45,12 +45,12 @@ def schnorr_signature(x, p=pDSA, q=qDSA, g=gDSA, msg=b'Digital signature using t
     h_ = int.from_bytes(h, byteorder='big')
     r = h_ % q
     s = (k - r*x) % q
-    print(f'Done: r: {r}, s: {s}')
+    #print(f'Done: r: {r}, s: {s}')
     return r, s
 
 def schnorr_verification(y, r, s, msg=b'Digital signature using the Schnorr scheme'):
 
-    print(f'Schnorr verification. Message: {msg}')
+    #print(f'Schnorr verification. Message: {msg}')
     nbytes = (pDSA.bit_length() + 7) // 8
     g_ = pow(gDSA, s, pDSA)
     y_ = pow(y, r, pDSA)
@@ -61,10 +61,15 @@ def schnorr_verification(y, r, s, msg=b'Digital signature using the Schnorr sche
     h = get_x_bytes_of_hash(message=M, x=32)
     r_ = int.from_bytes(h, byteorder='big')
     v = r_ % qDSA
-    assert r == v
-    print("Verification done: Digital Signature approved.")
-    print(f'r: {r}, r_: {v}')
-    print('Done!')
+    #assert r == v
+    if r == v:
+        print("Verification done: Digital Signature approved.")
+        print(f'r: {r}, r_: {v}')
+        print('Done!')
+        return True
+    else:
+        print('No story!')
+        return False
 
 
 def egcd(a, b):
@@ -235,6 +240,19 @@ def check_uHashCollision(n):
     print(f'UHash: found collision in 20 bytes string after: {uC_2} tries')
     print(f'Hash of string {m1}: 1: {ux_1}, 2: {ux_2}')
 
+def break_ds(r1, s1, r2, s2, y):
+
+    r_inv = modinv(r2-r1, qDSA)
+    assert r_inv*(r2-r1) % qDSA == 1
+    S = s1-s2
+    for i in range(-100, 100):
+        x = (r_inv*(S-i)) % qDSA
+        r_, s_ = schnorr_signature(x)
+        f = schnorr_verification(y=y, s=s_, r=r_)
+        if f:
+            print(f'Break DS: {x}')
+            break
+
 
 def main():
     print('(p-1) mod q:', (pDSA - 1) % qDSA)
@@ -253,7 +271,7 @@ def main():
     print('64 bit hash is:', hash[:8])
 
     start = time.time()
-    c1, c2, uc1, uc2, stats = check_collision(n=4*32, k=4)
+    c1, c2, uc1, uc2, stats = check_collision(n=8*32, k=4)
     elapsed = time.time() - start
     print(f'c1= {c1}, c2= {c2}; elapsed time: {elapsed} \n uc1={uc1}, uc2={uc2}')
     #print('Check 20 bytes collision of Universal Hash...')
@@ -267,17 +285,22 @@ def main():
 if __name__ == '__main__':
     uh = universal_hash()
     print(f'Universal hash digest: {uh}')
-    c1, c2, uC1, uC2, stats = main()
+    #c1, c2, uC1, uC2, stats = main()
     #x, y = schnorr_definition()
-    #r, s = schnorr_signature(x=x)
-    #schnorr_verification(y=y, r=r, s=s)
+    #r, s = schnorr_signature(x=x, msg=b'Cryptography is cool!')
+    #schnorr_verification(y=y, r=r, s=s, msg=b'Cryptography is cool!')
 
-    #yp = 42276637486569720268071647368550139276503521977640661888834825275517477780979914414339836061961635727800848465170706694019279805873893995587354694642526839889426158621140802827015533730771103146644607587713359225607432856473853326971226628964711099095487586928079612107255097386799478803704960241864601625828
-    #msg1 = b'first message'
-    #(r1, s1) = (299969984114895304388954029424480730263471439206, 192417049713099740312922361446986628497439105550)
-    #schnorr_verification(y=yp, r=r1, s=s1, msg=msg1)
+    yp = 42276637486569720268071647368550139276503521977640661888834825275517477780979914414339836061961635727800848465170706694019279805873893995587354694642526839889426158621140802827015533730771103146644607587713359225607432856473853326971226628964711099095487586928079612107255097386799478803704960241864601625828
+    msg1 = b'first message'
+    (r1, s1) = (299969984114895304388954029424480730263471439206, 192417049713099740312922361446986628497439105550)
+    schnorr_verification(y=yp, r=r1, s=s1, msg=msg1)
 
-    #msg2 = b'second message'
-    #(r2, s2) = (719970963765961216949252326232207427282652913363, 107425968460827725118970802806887322358870342520)
+    msg2 = b'second message'
+    (r2, s2) = (719970963765961216949252326232207427282652913363, 107425968460827725118970802806887322358870342520)
+    schnorr_verification(y=yp, r=r2, s=s2, msg=msg2)
 
-    #schnorr_verification(y=yp, r=r2, s=s2, msg=msg2)
+    break_ds(r1=r1, s1=s1, r2=r2, s2=s2, y=yp)
+
+
+    #r3, s3 = schnorr_signature(x=X, msg=b'Ciao ok?')
+    #schnorr_verification(y=yp, r=r3, s=s3, msg=b'Ciao ok?')
