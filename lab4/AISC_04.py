@@ -3,19 +3,12 @@ import secrets
 import time
 import numpy as np
 
-
-
-     
 aU = int.from_bytes(b"it is the constant a", byteorder='little')
 bU = int.from_bytes(b"it is the constant b", byteorder='big')
 
-
 # sample DSA parameters for 1024-bit key from RFC 6979
-
 pDSA = 0x86F5CA03DCFEB225063FF830A0C769B9DD9D6153AD91D7CE27F787C43278B447E6533B86B18BED6E8A48B784A14C252C5BE0DBF60B86D6385BD2F12FB763ED8873ABFD3F5BA2E0A8C0A59082EAC056935E529DAF7C610467899C77ADEDFC846C881870B7B19B2B58F9BE0521A17002E3BDD6B86685EE90B3D9A1B02B782B1779
-
 qDSA = 0x996F967F6C8E388D9E28D01E205FBA957A5698B1
-
 gDSA = 0x07B0F92546150B62514BB771E2A0C0CE387F03BDA6C56B505209FF25FD3C133D89BBCD97E904E09114D9A7DEFDEADFC9078EA544D2E401AEECC40BB9FBBF78FD87995A10A1C27CB7789B594BA7EFB5C4326A9FE59A070E136DB77175464ADCA417BE5DCE2F40D10A46A3A3943F26AB7FD9C0398FF8C76EE0A56826A8A88F1DBD
 
 # Schnorr Scheme
@@ -190,9 +183,7 @@ def check_collision(n, k):
 
 def universal_hash(a=aU, b=bU, q=qDSA, msg=b'SHA-256 is a cryptographic hash function', digest_length=2):
 
-
     m = int.from_bytes(msg, byteorder='big')
-
     h = (a*m + b) % q
     assert h.bit_length() <= q.bit_length()
     hash = h.to_bytes(int(q.bit_length()/8), byteorder='big')
@@ -217,8 +208,8 @@ def check_uHashCollision(n):
     # loop until our hashes are equal
     while ux_1 != ux_2:
         m0 = ux_1
-        ux_1 = get_x_bytes_of_hash(ux_1, 20)
-        ux_2 = get_x_bytes_of_hash(get_x_bytes_of_hash(ux_2, 20), 20)
+        ux_1 = universal_hash(msg=ux_1, digest_length=20)
+        ux_2 = universal_hash(msg=universal_hash(msg=ux_2, digest_length=20), digest_length=20)
         uC_1 += 1
 
     # Now H^i(x_0) == H^{2i}(x_0)
@@ -271,21 +262,38 @@ def main():
     print('64 bit hash is:', hash[:8])
 
     start = time.time()
-    c1, c2, uc1, uc2, stats = check_collision(n=8*32, k=4)
+    c1, c2, uc1, uc2, stats = check_collision(n=8*32, k=1)
     elapsed = time.time() - start
     print(f'c1= {c1}, c2= {c2}; elapsed time: {elapsed} \n uc1={uc1}, uc2={uc2}')
-    #print('Check 20 bytes collision of Universal Hash...')
-    #start = time.time()
-    #check_uHashCollision(n=4*20)
-    #elapsed = time.time()-start
-    #print(f'elapsed: {elapsed}')
+    print('Check 20 bytes collision of Universal Hash...')
+    start = time.time()
+    check_uHashCollision(n=4*20)
+    elapsed = time.time()-start
+    print(f'elapsed: {elapsed}')
     return c1, c2, uc1, uc2, stats
+
+def universalHashPreImage(msg=b'Preimage'):
+
+    h = universal_hash(msg=msg, digest_length=20)  # h = a*m + b % q -> m = (h-b)*a^-1 % q s.t a^-1*a = 1 % q
+    a_inv = modinv(aU, qDSA)
+    H = int.from_bytes(h, byteorder='big')
+    m = ((H-bU)*a_inv) % qDSA
+    msg = int.from_bytes(msg, byteorder='big')
+    assert msg == m
+    print(f'pre-image int m: {m}, int msg: {msg}')
+    m = m.to_bytes(20, byteorder='big')
+    h_ = universal_hash(msg=m, digest_length=20)
+    assert h == h_
+    print(f'Pre-image of hash: {h} found: {m}')
+
 
 
 if __name__ == '__main__':
     uh = universal_hash()
     print(f'Universal hash digest: {uh}')
     #c1, c2, uC1, uC2, stats = main()
+    #check_uHashCollision(n=8*32)
+    universalHashPreImage()
     #x, y = schnorr_definition()
     #r, s = schnorr_signature(x=x, msg=b'Cryptography is cool!')
     #schnorr_verification(y=y, r=r, s=s, msg=b'Cryptography is cool!')
@@ -293,13 +301,13 @@ if __name__ == '__main__':
     yp = 42276637486569720268071647368550139276503521977640661888834825275517477780979914414339836061961635727800848465170706694019279805873893995587354694642526839889426158621140802827015533730771103146644607587713359225607432856473853326971226628964711099095487586928079612107255097386799478803704960241864601625828
     msg1 = b'first message'
     (r1, s1) = (299969984114895304388954029424480730263471439206, 192417049713099740312922361446986628497439105550)
-    schnorr_verification(y=yp, r=r1, s=s1, msg=msg1)
+    #schnorr_verification(y=yp, r=r1, s=s1, msg=msg1)
 
     msg2 = b'second message'
     (r2, s2) = (719970963765961216949252326232207427282652913363, 107425968460827725118970802806887322358870342520)
-    schnorr_verification(y=yp, r=r2, s=s2, msg=msg2)
+    #schnorr_verification(y=yp, r=r2, s=s2, msg=msg2)
 
-    break_ds(r1=r1, s1=s1, r2=r2, s2=s2, y=yp)
+    #break_ds(r1=r1, s1=s1, r2=r2, s2=s2, y=yp)
 
 
     #r3, s3 = schnorr_signature(x=X, msg=b'Ciao ok?')
