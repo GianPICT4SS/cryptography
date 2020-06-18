@@ -20,8 +20,8 @@
    4. Break a weak Schnorr DS.
 
 ## Lab 5. Certificates and Transport Layer Security
-1. create and use certificates;
-2. TLS Handshake.
+1. create and use certificates: RSA & ECDSA;
+2. TLS v1-v1.3 Handshake.
 
 
  
